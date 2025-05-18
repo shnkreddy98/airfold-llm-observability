@@ -30,7 +30,7 @@ if __name__ == "__main__":
 
     ingested = 0
     batch = 1_000
-    no_of_rows = 100_000
+    no_of_rows = 10_000
 
     already_ingested = read_file(statesave)
 
@@ -46,7 +46,7 @@ if __name__ == "__main__":
         try:
             json_data = generate_responses(request_timestamp, batch)
             logging.info(f'Generated {already_ingested+(part*batch)} rows')
-            write_file(datafile, json_data, filetype='json')
+            write_file(datafile, json_data)
             res = ingest('llm_json', datafile)
             if res:
                 ingested += batch
