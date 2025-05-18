@@ -1,15 +1,12 @@
 import random
 import uuid
+import time
+from typing import List, Dict, Any
 
-# Random user agents
-user_agents = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
-    "Mozilla/5.0 (X11; Linux x86_64)",
-    "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X)"
-]
+WORDS_FILE = "./data/words.txt"
 
-llm_models = [
+# OpenAI models list
+OPENAI_MODELS = [
     'gpt-4o-realtime-preview-2024-12-17', 'gpt-4-1106-preview', 'gpt-4-turbo-preview', 'babbage-002',
     'gpt-4', 'chatgpt-4o-latest', 'o1-preview-2024-09-12', 'gpt-4o-mini-realtime-preview',
     'gpt-4o-mini-realtime-preview-2024-12-17', 'gpt-4.1-nano', 'gpt-3.5-turbo-instruct-0914',
@@ -23,107 +20,306 @@ llm_models = [
     'gpt-4.1-2025-04-14', 'o4-mini-2025-04-16', 'o4-mini','codex-mini-latest'
 ]
 
-def random_probabilities(n):
-    probabilities = [random.random() for _ in range(n)]
-    total = sum(probabilities)
-    return [p / total for p in probabilities]
+# Status options
+STATUS_OPTIONS = ["completed", "incomplete", "failed"]
 
-# Random IP generator
-def random_ip():
-    return f"{random.randint(1, 255)}.{random.randint(0, 255)}.{random.randint(0, 255)}.{random.randint(1, 254)}"
+# Truncation options  
+TRUNCATION_OPTIONS = ["disabled", "auto", "always"]
 
-# Token generation
-def generate_token_counts():
-    input_tokens = random.randint(10, 100)
-    output_tokens = random.randint(10, 200)
+# Tool choice options
+TOOL_CHOICE_OPTIONS = ["auto", "required", "none"]
+
+# User agents for request headers
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+    "Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+    "OpenAI/Python/1.3.8",
+    "OpenAI/Node.js/4.20.1",
+    "axios/1.6.0",
+    "python-requests/2.31.0",
+    "Postman/10.19.0",
+    "curl/8.4.0"
+]
+
+# Load words for content generation
+try:
+    with open(WORDS_FILE, "r") as f:
+        WORDS = [word.strip() for word in f if word.strip().isalpha()]
+except FileNotFoundError:
+    # Fallback words if file doesn't exist
+    WORDS = ['the', 'quick', 'brown', 'fox', 'jumps', 'over', 'lazy', 'dog', 'hello', 'world', 
+             'artificial', 'intelligence', 'machine', 'learning', 'data', 'science', 'technology',
+             'innovation', 'future', 'digital', 'algorithm', 'neural', 'network', 'deep', 'learning',
+             'peaceful', 'grove', 'beneath', 'silver', 'moon', 'unicorn', 'magical', 'realm',
+             'stardust', 'shimmer', 'wonder', 'dream', 'sparkle', 'wish', 'pathway', 'hidden']
+
+def generate_realistic_ip():
+    """Generate realistic IP addresses"""
+    # Common cloud provider IP ranges
+    cloud_ranges = [
+        (3, 5),      # Amazon AWS partial
+        (13, 107),   # Amazon AWS partial
+        (52, 54),    # Amazon AWS partial
+        (104, 155),  # Google Cloud partial
+        (34, 35),    # Google Cloud partial
+        (40, 52),    # Microsoft Azure partial
+        (137, 138),  # Microsoft Azure partial
+    ]
+    
+    if random.random() < 0.3:  # 30% chance of cloud IP
+        first, second = random.choice(cloud_ranges)
+        return f"{first}.{second}.{random.randint(0, 255)}.{random.randint(1, 254)}"
+    else:  # Regular IP
+        return f"{random.randint(1, 255)}.{random.randint(0, 255)}.{random.randint(0, 255)}.{random.randint(1, 254)}"
+
+def generate_realistic_tokens(model_name: str):
+    """Generate realistic token counts based on model type"""
+    # Determine model category and adjust tokens accordingly
+    if 'o1' in model_name.lower():
+        # O1 models typically use more reasoning tokens
+        input_tokens = random.randint(20, 200)
+        output_tokens = random.randint(50, 300)
+        reasoning_tokens = random.randint(100, 1000)
+    elif 'gpt-4' in model_name.lower():
+        # GPT-4 variants
+        input_tokens = random.randint(30, 500)
+        output_tokens = random.randint(50, 800)
+        reasoning_tokens = 0
+    elif 'gpt-3.5' in model_name.lower():
+        # GPT-3.5 variants
+        input_tokens = random.randint(20, 300)
+        output_tokens = random.randint(30, 500)
+        reasoning_tokens = 0
+    else:
+        # Default for other models
+        input_tokens = random.randint(10, 200)
+        output_tokens = random.randint(20, 400)
+        reasoning_tokens = 0
+    
+    # Sometimes have cached tokens
+    cached_tokens = random.randint(0, input_tokens // 3) if random.random() < 0.2 else 0
+    
     return {
         "input_tokens": input_tokens,
         "input_tokens_details": {
-            "cached_tokens": 0
+            "cached_tokens": cached_tokens
         },
         "output_tokens": output_tokens,
         "output_tokens_details": {
-            "reasoning_tokens": random.randint(0, 10)
+            "reasoning_tokens": reasoning_tokens
         },
-        "total_tokens": input_tokens + output_tokens
+        "total_tokens": input_tokens + output_tokens + reasoning_tokens
     }
 
-# Output message
-def generate_output_message():
+def generate_text_content(min_words: int = 10, max_words: int = 100):
+    """Generate realistic text content"""
+    word_count = random.randint(min_words, max_words)
+    words = random.choices(WORDS, k=word_count)
+    
+    # Create sentences
+    sentences = []
+    current_sentence = []
+    
+    for i, word in enumerate(words):
+        current_sentence.append(word)
+        
+        # End sentence randomly or at end
+        if (random.random() < 0.15 and len(current_sentence) > 5) or i == len(words) - 1:
+            sentence = " ".join(current_sentence)
+            sentence = sentence.capitalize() + random.choice(['.', '!', '?'])
+            sentences.append(sentence)
+            current_sentence = []
+    
+    return " ".join(sentences)
+
+def generate_tools():
+    """Generate function tools (sometimes empty)"""
+    if random.random() < 0.3:  # 30% chance of having tools
+        return [{
+            "type": "function",
+            "function": {
+                "name": random.choice(["get_weather", "search_web", "calculate", "send_email"]),
+                "description": f"A function that {generate_text_content(3, 8)}",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "input": {"type": "string", "description": "Input parameter"}
+                    },
+                    "required": ["input"]
+                }
+            }
+        }]
+    return []
+
+def generate_error():
+    """Generate error object (sometimes null)"""
+    if random.random() < 0.05:  # 5% chance of error
+        return {
+            "type": "api_error",
+            "code": random.choice(["rate_limit_exceeded", "insufficient_quota", "model_overloaded"]),
+            "message": "An error occurred while processing the request."
+        }
+    return {}
+
+def generate_incomplete_details():
+    """Generate incomplete details (sometimes null)"""
+    if random.random() < 0.02:  # 2% chance of incomplete
+        return {
+            "reason": random.choice(["max_tokens", "content_filter", "tool_calls"])
+        }
+    return {}
+
+def generate_output_message(err=None):
+    """Generate output message array"""
     return [{
         "type": "message",
         "id": f"msg_{uuid.uuid4().hex}",
-        "status": "completed",
+        "status": random.choice(STATUS_OPTIONS),
         "role": "assistant",
         "content": [{
             "type": "output_text",
-            "text": "This is a sample response generated by the assistant for demonstration purposes.",
+            "text": generate_text_content(20, 150),
             "annotations": []
         }]
     }]
 
-# Main response with request metadata
-def generate_response(previous_ids, request_time):
-    response_time = request_time + random.randint(1, 15)  # ensure response after request
+def generate_reasoning():
+    """Generate reasoning object"""
+    return {
+        "effort": random.choice([None, "low", "medium", "high"]) if random.random() < 0.3 else None,
+        "summary": generate_text_content(5, 20) if random.random() < 0.1 else None
+    }
 
-    request_id = f"req_{uuid.uuid4().hex}"
-    response_id = f"resp_{uuid.uuid4().hex}"
+def generate_text_format():
+    """Generate text format object"""
+    return {
+        "format": {
+            "type": "text"
+        }
+    }
 
-    has_previous = random.random() < 0.1
-    previous_response_id = random.choice(previous_ids) if has_previous and previous_ids else None
+def generate_request_messages():
+    """Generate request messages array"""
+    # Generate 1-5 messages in conversation
+    messages = []
+    
+    # Start with user message
+    role = 'user'
+    
+    content = generate_text_content(5, 50)
+    
+    messages.append({
+        "role": role,
+        "content": content
+    })
+    
+    return messages
 
-    model_choice = random.choice(llm_models)
-    truncation_options = ["disabled", "auto", "always"]
+def generate_request_data(timestamp: int):
+    """Generate request data including headers and message"""
+    return {
+        "timestamp": timestamp - random.randint(1, 10),  # Request came slightly before response
+        "ip": generate_realistic_ip(),
+        "user_agent": random.choice(USER_AGENTS),
+        "headers": {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer sk-{uuid.uuid4().hex}",
+            "User-Agent": random.choice(USER_AGENTS),
+            "Accept": "application/json",
+            "Connection": "keep-alive",
+            "Content-Length": str(random.randint(200, 2000)),
+            "Host": "api.openai.com",
+            "X-Request-ID": f"req_{uuid.uuid4().hex[:16]}",
+        },
+        "messages": generate_request_messages()
+    }
 
+def generate_openai_response(response_id: str, timestamp: int, previous_response_ids: List[str] = None):
+    """Generate a realistic OpenAI API response matching the exact format"""
+    
+    # Select random model
+    model = random.choice(OPENAI_MODELS)
+    
+    # Generate tools
+    tools = generate_tools()
+    
+    # Determine if this response has a previous response reference
+    previous_response_id = None
+    if previous_response_ids and random.random() < 0.1:  # 10% chance of referencing previous
+        previous_response_id = random.choice(previous_response_ids)
+    
     return {
         "id": response_id,
-        "request_id": request_id,
         "object": "response",
-        "created_at": response_time,
-        "status": "completed",
-        "error": None,
-        "incomplete_details": None,
-        "instructions": None,
-        "max_output_tokens": None,
-        "model": model_choice,
+        "created_at": timestamp,
+        "status": random.choice(STATUS_OPTIONS),
+        "error": generate_error(),
+        "incomplete_details": generate_incomplete_details(),
+        "instructions": generate_text_content(5, 30) if random.random() < 0.1 else None,
+        "max_output_tokens": random.randint(100, 4000) if random.random() < 0.3 else None,
+        "model": model,
         "output": generate_output_message(),
         "parallel_tool_calls": random.choice([True, False]),
         "previous_response_id": previous_response_id,
-        "reasoning": {
-            "effort": None,
-            "summary": None
-        },
-        "store": True,
-        "temperature": round(random.uniform(0.0, 1.5), 2),
-        "text": {
-            "format": {
-                "type": "text"
-            }
-        },
-        "tool_choice": "auto",
-        "tools": [],
-        "top_p": 1.0,
-        "truncation": random.choice(truncation_options),
-        "usage": generate_token_counts(),
-        "user": None,
-        "metadata": {},
-        "request": {
-            "timestamp": request_time,
-            "ip": random_ip(),
-            "user_agent": random.choice(user_agents),
-            "headers": {
-                "X-Forwarded-For": random_ip(),
-                "Content-Type": "application/json"
-            }
-        }
-    }, response_id
+        "reasoning": generate_reasoning(),
+        "store": random.choice([True, False]),
+        "temperature": round(random.uniform(0.0, 2.0), 1),
+        "text": generate_text_format(),
+        "tool_choice": random.choice(TOOL_CHOICE_OPTIONS),
+        "tools": tools,
+        "top_p": round(random.uniform(0.1, 1.0), 1),
+        "truncation": random.choice(TRUNCATION_OPTIONS),
+        "usage": generate_realistic_tokens(model),
+        "user": f"user_{uuid.uuid4().hex[:8]}" if random.random() < 0.7 else None,
+        "metadata": {},  # Always empty dict as per example
+        "request": generate_request_data(timestamp)
+    }
 
-def generate_responses(timestamp_val, n):
+def generate_batch_responses(count: int, start_timestamp: int = None):
+    """Generate a batch of OpenAI responses"""
+    if start_timestamp is None:
+        start_timestamp = int(time.time())
+    
     responses = []
     response_ids = []
-    for _ in range(n):
-        response, resp_id = generate_response(response_ids, timestamp_val)
+    
+    for i in range(count):
+        # Generate timestamp with some randomness
+        timestamp = start_timestamp + random.randint(0, 3600 * 24)  # Within 24 hours
+        
+        # Generate response ID
+        response_id = f"resp_{uuid.uuid4().hex}"
+        
+        # Generate response
+        response = generate_openai_response(response_id, timestamp, response_ids)
+        
         responses.append(response)
-        response_ids.append(resp_id)
+        response_ids.append(response_id)
+    
+    # Sort by timestamp
+    responses.sort(key=lambda x: x['created_at'])
+    
     return responses
 
+def save_responses_to_file(responses: List[Dict], filename: str = "openai_responses.json"):
+    """Save generated responses to a JSON file"""
+    import json
+    with open(filename, 'w') as f:
+        json.dump(responses, f, indent=2)
+    print(f"Saved {len(responses)} responses to {filename}")
+
+# Example usage
+if __name__ == "__main__":
+    # Generate 50 responses
+    responses = generate_batch_responses(50)
+    
+    # Save to file
+    save_responses_to_file(responses)
+    
+    # Print sample response
+    import json
+    print("\nSample Response:")
+    print(json.dumps(responses[0], indent=2))

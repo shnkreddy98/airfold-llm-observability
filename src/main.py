@@ -1,5 +1,5 @@
 from file_manipulation import initialize, read_file, write_file
-from generate_data import generate_responses
+from generate_data import generate_batch_responses
 from ingest_data import ingest
 from logging_utils import setup_logging
 
@@ -29,8 +29,8 @@ if __name__ == "__main__":
         request_timestamp = random.randint(start_ts, end_ts)
 
     ingested = 0
-    batch = 1_000
-    no_of_rows = 10_000
+    batch = 10
+    no_of_rows = 100
 
     already_ingested = read_file(statesave)
 
@@ -44,7 +44,7 @@ if __name__ == "__main__":
 
     for part in range(total_iter):
         try:
-            json_data = generate_responses(request_timestamp, batch)
+            json_data = generate_batch_responses(batch, request_timestamp)
             logging.info(f'Generated {already_ingested+(part*batch)} rows')
             write_file(datafile, json_data)
             res = ingest('llm_json', datafile)

@@ -1,14 +1,13 @@
 name: llm_json
 cols:
   id: String
-  request_id: String
   object: LowCardinality(String)
   created_at: DateTime
   status: LowCardinality(String)
-  error: Nullable(String)
-  incomplete_details: Nullable(String)
+  error: JSON
+  incomplete_details: JSON
   instructions: Nullable(String)
-  max_output_tokens: Nullable(String)
+  max_output_tokens: Nullable(Int64)
   model: String
   # output: Array(JSON)
   output_type: LowCardinality(String) $.output[0].type
@@ -32,20 +31,22 @@ cols:
   top_p: Decimal(2, 1)
   truncation: String
   # usage: JSON
-  usage_input_tokens: Int8 $.usage.input_tokens
-  usage_input_token_details_cached_tokens: Int8 $.usage.input_tokens_details.cached_tokens
-  usage_output_tokens: Int8 $.usage.output_tokens
-  usage_output_tokens_details_cahced_tokens: Int8 $.usage.output_tokens_details.reasoning_tokens
-  usage_total_tokens: Int8 $.usage.total_tokens
+  usage_input_tokens: Int32 $.usage.input_tokens
+  usage_input_token_details_cached_tokens: Int32 $.usage.input_tokens_details.cached_tokens
+  usage_output_tokens: Int32 $.usage.output_tokens
+  usage_output_tokens_details_reasoning_tokens: Int32 $.usage.output_tokens_details.reasoning_tokens
+  usage_total_tokens: Int32 $.usage.total_tokens
   user: Nullable(String)
   metadata: JSON
   # request: JSON
   request_timestamp: Datetime $.request.timestamp
   request_ip: String $.request.ip
   request_user_agent: Nullable(String) $.request.user_agent
-  request_headers: JSON
+  request_headers: JSON $.request.headers
   # request_headers_x_forwarded_for: String $.request.headers.X_Forwarded_For
   # request_headers_content_type: LowCardinality(String) $.request.headers.Content_Type
+  request_messages_role: LowCardinality(String) $.request.messages[0].role
+  request_messages_content: String $.request.messages[0].content
 settings:
   engine: ReplacingMergeTree()
-  order_by: "`model`"
+  order_by: "`id`"
