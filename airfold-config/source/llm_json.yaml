@@ -1,0 +1,51 @@
+name: llm_json
+cols:
+  id: String
+  request_id: String
+  object: LowCardinality(String)
+  created_at: DateTime
+  status: LowCardinality(String)
+  error: Nullable(String)
+  incomplete_details: Nullable(String)
+  instructions: Nullable(String)
+  max_output_tokens: Nullable(String)
+  model: String
+  # output: Array(JSON)
+  output_type: LowCardinality(String) $.output[0].type
+  output_id: String $.output[0].id
+  output_status: LowCardinality(String) $.output[0].status
+  output_role: LowCardinality(String) $.output[0].role
+  output_content_type: String $.output[0].content[0].type
+  output_content_text: String $.output[0].content[0].text
+  output_content_annotations: Array(String) $.output[0].content[0].annotations
+  parallel_tool_calls: Boolean
+  previous_response_id: Nullable(String)
+  # reasoning: JSON
+  reasoning_effort: Nullable(String) $.reasoning.effort
+  reasoning_summary: Nullable(String) $.reasoning.summary
+  store: Boolean
+  temperature: Decimal(4, 2)
+  # text: JSON
+  text_format_type: String $.text.format.type
+  tool_choice: String
+  tools: Array(JSON)
+  top_p: Decimal(2, 1)
+  truncation: String
+  # usage: JSON
+  usage_input_tokens: Int8 $.usage.input_tokens
+  usage_input_token_details_cached_tokens: Int8 $.usage.input_tokens_details.cached_tokens
+  usage_output_tokens: Int8 $.usage.output_tokens
+  usage_output_tokens_details_cahced_tokens: Int8 $.usage.output_tokens_details.reasoning_tokens
+  usage_total_tokens: Int8 $.usage.total_tokens
+  user: Nullable(String)
+  metadata: JSON
+  # request: JSON
+  request_timestamp: Datetime $.request.timestamp
+  request_ip: String $.request.ip
+  request_user_agent: Nullable(String) $.request.user_agent
+  request_headers: JSON
+  # request_headers_x_forwarded_for: String $.request.headers.X_Forwarded_For
+  # request_headers_content_type: LowCardinality(String) $.request.headers.Content_Type
+settings:
+  engine: ReplacingMergeTree()
+  order_by: "`model`"
