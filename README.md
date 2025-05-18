@@ -29,14 +29,12 @@ af config
 
 Paste your Airfold API key when prompted.
 
-### 4. Set Data Generation Parameters
+### 4. Set Data Generation and Ingestion Parameters
 
 Open `src/main.py` and configure the following:
 
-- `batch`: Number of rows per batch
+- `batch`: Number of rows to ingest per batch
 - `no_of_rows`: Total number of rows to generate
-
-Adjust these as per your data generation needs.
 
 ### 5. Run the Program
 
