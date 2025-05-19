@@ -1,5 +1,5 @@
 from file_manipulation import initialize, read_file, write_file
-from generate_data import generate_batch_responses
+from generate_data_new import generate_batch_responses
 from ingest_data import ingest
 from logging_utils import setup_logging
 
