@@ -15,18 +15,15 @@ logfile = 'ingest_llm_{}.log'
 if __name__ == "__main__":
     setup_logging(logfile)
     initialize(datafile, statesave)
-    now = round(datetime.now().timestamp())
 
     if len(sys.argv)<2:
         print("run with --stream or --old \neg. `python3 src/main.py --stream`")
         exit()
-
-    if sys.argv[1] == '--stream':
-        request_timestamp = now
-    elif sys.argv[1] == '--old':
-        start_ts = datetime(2024, 1, 1, 0, 0).timestamp()
-        end_ts = now
-        request_timestamp = random.randint(start_ts, end_ts)
+        
+    if sys.argv[1]=='--stream':
+        stream=True
+    else:
+        stream=False
 
     ingested = 0
     batch = 1000
@@ -44,7 +41,7 @@ if __name__ == "__main__":
 
     for part in range(total_iter):
         try:
-            json_data = generate_batch_responses(batch, request_timestamp)
+            json_data = generate_batch_responses(batch, stream)
             logging.info(f'Generated {already_ingested+(part*batch)+1} rows')
             write_file(datafile, json_data)
             res = ingest('llm_json', datafile)

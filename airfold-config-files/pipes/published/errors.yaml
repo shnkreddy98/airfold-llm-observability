@@ -1,0 +1,39 @@
+name: errors
+nodes:
+  - declare_variables:
+      sql: |
+        SELECT
+          now() AS curr_time,
+          {% if interval=='fiveminutes' %}
+            5
+          {% elif interval=='thirtyminutes' %}
+            30
+          {% elif interval=='onehour' %}
+            60*1
+          {% elif interval=='threehours' %}
+            60*3
+          {% elif interval=='twelvehours' %}
+            60*12
+          {% elif interval=='oneday' %}
+            60*24
+          {% elif interval=='sevendays' %}
+            60*24*7
+          {% elif interval=='thirtydays' %}
+            60*24*30
+          {% elif interval=='nintydays' %}
+            60*24*90
+          {% else %}
+            60*24*365
+          {% endif %} AS interval_int
+  - agg_node:
+      sql: |
+        SELECT
+          SUM(CASE WHEN JSONLength(toString(error))=0 THEN 0 ELSE 1 END) AS total_errors
+        FROM llm_json, declare_variables
+        WHERE request_timestamp BETWEEN timestamp_sub(minute, declare_variables.interval_int, declare_variables.curr_time)
+          AND declare_variables.curr_time
+publish: errors
+params:
+  - name: interval
+    type: string
+    default: fiveminutes

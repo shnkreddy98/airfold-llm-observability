@@ -1,3 +1,4 @@
+from datetime import datetime
 import random
 import uuid
 import time
@@ -147,25 +148,7 @@ def generate_tools():
         }]
     return []
 
-def generate_error():
-    """Generate error object (sometimes null)"""
-    if random.random() < 0.05:  # 5% chance of error
-        return {
-            "type": "api_error",
-            "code": random.choice(["rate_limit_exceeded", "insufficient_quota", "model_overloaded"]),
-            "message": "An error occurred while processing the request."
-        }
-    return {}
-
-def generate_incomplete_details():
-    """Generate incomplete details (sometimes null)"""
-    if random.random() < 0.02:  # 2% chance of incomplete
-        return {
-            "reason": random.choice(["max_tokens", "content_filter", "tool_calls"])
-        }
-    return {}
-
-def generate_output_message(err=None):
+def generate_output_message():
     """Generate output message array"""
     return [{
         "type": "message",
@@ -197,17 +180,32 @@ def generate_text_format():
 def generate_request_messages():
     """Generate request messages array"""
     # Generate 1-5 messages in conversation
+    message_count = random.randint(1, 5)
     messages = []
     
     # Start with user message
-    role = 'user'
+    roles = ['user', 'assistant']
+    current_role = 0
     
-    content = generate_text_content(5, 50)
-    
-    messages.append({
-        "role": role,
-        "content": content
-    })
+    for i in range(message_count):
+        role = roles[current_role]
+        content = generate_text_content(5, 50) if role == 'user' else generate_text_content(10, 100)
+        
+        messages.append({
+            "role": role,
+            "content": content
+        })
+        
+        # Alternate roles (but end with user message)
+        if i < message_count - 1:
+            current_role = 1 - current_role
+        else:
+            # Always end with user message for the request
+            if role != 'user':
+                messages.append({
+                    "role": "user", 
+                    "content": generate_text_content(5, 30)
+                })
     
     return messages
 
@@ -236,52 +234,111 @@ def generate_openai_response(response_id: str, timestamp: int, previous_response
     # Select random model
     model = random.choice(OPENAI_MODELS)
     
-    # Generate tools
-    tools = generate_tools()
+    # Determine status first to control other fields
+    status = random.choice(STATUS_OPTIONS)
+    
+    # Control output, error, and incomplete_details based on status
+    if status == "completed":
+        output = generate_output_message()
+        error = {}
+        incomplete_details = {}
+    elif status == "failed":
+        output = []
+        error = {
+            "type": "api_error",
+            "code": random.choice(["rate_limit_exceeded", "insufficient_quota", "model_overloaded", "processing_error"]),
+            "message": "An error occurred while processing the request."
+        }
+        incomplete_details = {}
+    else:  # incomplete
+        output = generate_output_message()  # Partial output for incomplete
+        error = {}
+        incomplete_details = {
+            "reason": random.choice(["max_tokens", "content_filter", "tool_calls"])
+        }
+    
+    # Control parallel_tool_calls, tools, and tool_choice
+    parallel_tool_calls = random.choice([True, False])
+    if parallel_tool_calls:
+        tools = generate_tools()
+        if not tools:  # If no tools generated, create at least one
+            tools = [{
+                "type": "function",
+                "function": {
+                    "name": "get_current_time",
+                    "description": "Get the current time",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {},
+                        "required": []
+                    }
+                }
+            }]
+        tool_choice = random.choice(TOOL_CHOICE_OPTIONS)
+    else:
+        tools = []
+        tool_choice = "none"
     
     # Determine if this response has a previous response reference
     previous_response_id = None
     if previous_response_ids and random.random() < 0.1:  # 10% chance of referencing previous
         previous_response_id = random.choice(previous_response_ids)
     
+    # Generate user with 60% returning users - simplified approach
+    if random.random() < 0.7:  # 70% chance of having a user
+        if random.random() < 0.6:  # 60% chance of returning user (simplified)
+            user_id = random.randint(1, 20)  # Pick from pool of 20 users
+            user = f"user_{str(user_id).zfill(8)}"
+        else:  # New user
+            user = f"user_{uuid.uuid4().hex[:8]}"
+    else:
+        user = None
+    
     return {
         "id": response_id,
         "object": "response",
         "created_at": timestamp,
-        "status": random.choice(STATUS_OPTIONS),
-        "error": generate_error(),
-        "incomplete_details": generate_incomplete_details(),
-        "instructions": generate_text_content(5, 30) if random.random() < 0.1 else None,
+        "status": status,  # Status with complete should have output and no error, status with failed or incomplete should have error and no output
+        "error": error,
+        "incomplete_details": incomplete_details,
+        "instructions": None,
         "max_output_tokens": random.randint(100, 4000) if random.random() < 0.3 else None,
         "model": model,
-        "output": generate_output_message(),
-        "parallel_tool_calls": random.choice([True, False]),
+        "output": output,
+        "parallel_tool_calls": parallel_tool_calls,  # when true tools and tools_choice should have values otherwise none
         "previous_response_id": previous_response_id,
         "reasoning": generate_reasoning(),
         "store": random.choice([True, False]),
         "temperature": round(random.uniform(0.0, 2.0), 1),
         "text": generate_text_format(),
-        "tool_choice": random.choice(TOOL_CHOICE_OPTIONS),
+        "tool_choice": tool_choice,
         "tools": tools,
         "top_p": round(random.uniform(0.1, 1.0), 1),
         "truncation": random.choice(TRUNCATION_OPTIONS),
         "usage": generate_realistic_tokens(model),
-        "user": f"user_{uuid.uuid4().hex[:8]}" if random.random() < 0.7 else None,
+        "user": user,  # User should be repeating every once in a while, say 60% returning users
         "metadata": {},  # Always empty dict as per example
         "request": generate_request_data(timestamp)
     }
 
-def generate_batch_responses(count: int, start_timestamp: int = None):
+def generate_batch_responses(count: int, stream: bool = False):
     """Generate a batch of OpenAI responses"""
-    if start_timestamp is None:
-        start_timestamp = int(time.time())
     
     responses = []
     response_ids = []
     
     for i in range(count):
+        now = round(datetime.now().timestamp())
+
+        if stream:
+            request_timestamp = now
+        else:
+            start_ts = datetime(2024, 1, 1, 0, 0).timestamp()
+            end_ts = now
+            request_timestamp = random.randint(start_ts, end_ts)
+
         # Generate timestamp with some randomness
-        timestamp = start_timestamp + random.randint(0, 3600 * 24)  # Within 24 hours
+        timestamp = request_timestamp + int(random.triangular(0, 300, 60))  # within 5 mins
         
         # Generate response ID
         response_id = f"resp_{uuid.uuid4().hex}"

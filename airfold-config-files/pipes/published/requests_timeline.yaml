@@ -1,0 +1,57 @@
+name: requests_vs_errors_timeline
+nodes:
+  - agg_node:
+      sql: |
+        WITH 
+          now() AS curr_time,
+          {% if interval=='fiveminutes' %}
+            5 AS interval_int
+            SELECT
+              toStartOfInterval(request_timestamp, INTERVAL 1 MINUTE) AS timeseries,
+          {% elif interval=='thirtyminutes' %}
+            30 AS interval_int
+            SELECT
+              toStartOfInterval(request_timestamp, INTERVAL 1 MINUTE) AS timeseries,
+          {% elif interval=='onehour' %}
+            60*1 AS interval_int
+            SELECT
+              toStartOfInterval(request_timestamp, INTERVAL 10 MINUTE) AS timeseries,
+          {% elif interval=='threehours' %}
+            60*3 AS interval_int
+            SELECT
+              toStartOfInterval(request_timestamp, INTERVAL 10 MINUTE) AS timeseries,
+          {% elif interval=='twelvehours' %}
+            60*12 AS interval_int
+            SELECT
+              toStartOfInterval(request_timestamp, INTERVAL 1 HOUR) AS timeseries,
+          {% elif interval=='oneday' %}
+            60*24 AS interval_int
+            SELECT
+              toStartOfInterval(request_timestamp, INTERVAL 1 HOUR) AS timeseries,
+          {% elif interval=='sevendays' %}
+            60*24*7 AS interval_int
+            SELECT
+              toStartOfInterval(request_timestamp, INTERVAL 1 DAY) AS timeseries,
+          {% elif interval=='thirtydays' %}
+            60*24*30 AS interval_int
+            SELECT
+              toStartOfInterval(request_timestamp, INTERVAL 1 DAY) AS timeseries,
+          {% elif interval=='nintydays' %}
+            60*24*90 AS interval_int
+            SELECT
+              toStartOfInterval(request_timestamp, INTERVAL 1 DAY) AS timeseries,
+          {% else %}
+            60*24*365 AS interval_int
+            SELECT
+              toStartOfInterval(request_timestamp, INTERVAL 1 MONTH) AS timeseries,
+          {% endif %}
+            COUNT(*) AS requests,
+            SUM(CASE WHEN JSONLength(toString(error))=0 THEN 0 ELSE 1 END) AS errors
+        FROM llm_json
+        WHERE request_timestamp BETWEEN timestamp_sub(minute, interval_int, curr_time) AND curr_time
+        GROUP BY timeseries
+publish: requests_timeline
+params:
+  - name: interval
+    type: string
+    default: fiveminute
