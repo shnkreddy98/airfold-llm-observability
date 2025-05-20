@@ -1,0 +1,39 @@
+name: source_llm_json
+cols:
+  id: String
+  object: LowCardinality(String)
+  created_at: DateTime
+  status: LowCardinality(String)
+  error: JSON
+  incomplete_details: JSON
+  instructions: Nullable(String)
+  max_output_tokens: Nullable(Int64)
+  model: String
+  output: Array(JSON)
+  parallel_tool_calls: Boolean
+  previous_response_id: Nullable(String)
+  reasoning_effort: Nullable(String) $.reasoning.effort
+  reasoning_summary: Nullable(String) $.reasoning.summary
+  store: Boolean
+  temperature: Decimal(4, 2)
+  text_format_type: String $.text.format.type
+  tool_choice: String
+  tools: Array(JSON)
+  top_p: Decimal(2, 1)
+  truncation: String
+  usage_input_tokens: Int32 $.usage.input_tokens
+  usage_input_tokens_details_cached_tokens: Int32 $.usage.input_tokens_details.cached_tokens
+  usage_output_tokens: Int32 $.usage.output_tokens
+  usage_output_tokens_details_reasoning_tokens: Int32 $.usage.output_tokens_details.reasoning_tokens
+  usage_total_tokens: Int32 $.usage.total_tokens
+  user: Nullable(String)
+  metadata: JSON
+  request_timestamp: Datetime $.request.timestamp
+  request_ip: String $.request.id
+  request_headers: JSON $.request.headers
+  request_messages_role: LowCardinality(String) $.request.messages[0].role
+  request_messages_content: String $.request.messages[0].content
+settings:
+  engine: ReplacingMergeTree()
+  partition_by: "toYYYYMM(request_timestamp)"
+  order_by: "(request_timestamp, created_at, id)"
