@@ -1,4 +1,4 @@
-name: user_count
+name: cost_over_time
 nodes:
   - calc_cost_over_time:
       sql: |
@@ -35,17 +35,19 @@ nodes:
           {% else %}
             toStartOfInterval(created_at, INTERVAL 1 MONTH)
           {% endif %} AS timeseries,
-          COUNT(DISTINCT user) AS users
-        FROM llm_json
+          SUM(input_cost) AS total_input_cost,
+          SUM(output_cost) AS total_output_cost,
+          SUM(total_cost) AS total_total_cost
+        FROM model_costs
         WHERE created_at BETWEEN timestamp_sub(minute, interval_int, curr_time)
         AND curr_time
         GROUP BY timeseries
         ORDER BY timeseries ASC
-publish: user_count
+publish: cost_over_time
 params:
   - name: interval
     type: string
     default: fiveminutes
   - name: granularity
     type: string
-    default: minute
+    default: hour

@@ -1,57 +1,51 @@
-name: requests_vs_errors_timeline
+name: requests_timeline
 nodes:
   - agg_node:
       sql: |
-        WITH 
+        WITH
           now() AS curr_time,
           {% if interval=='fiveminutes' %}
-            5 AS interval_int
-            SELECT
-              toStartOfInterval(request_timestamp, INTERVAL 1 MINUTE) AS timeseries,
+            5
           {% elif interval=='thirtyminutes' %}
-            30 AS interval_int
-            SELECT
-              toStartOfInterval(request_timestamp, INTERVAL 1 MINUTE) AS timeseries,
+            30
           {% elif interval=='onehour' %}
-            60*1 AS interval_int
-            SELECT
-              toStartOfInterval(request_timestamp, INTERVAL 10 MINUTE) AS timeseries,
+            60*1
           {% elif interval=='threehours' %}
-            60*3 AS interval_int
-            SELECT
-              toStartOfInterval(request_timestamp, INTERVAL 10 MINUTE) AS timeseries,
+            60*3
           {% elif interval=='twelvehours' %}
-            60*12 AS interval_int
-            SELECT
-              toStartOfInterval(request_timestamp, INTERVAL 1 HOUR) AS timeseries,
+            60*12
           {% elif interval=='oneday' %}
-            60*24 AS interval_int
-            SELECT
-              toStartOfInterval(request_timestamp, INTERVAL 1 HOUR) AS timeseries,
+            60*24
           {% elif interval=='sevendays' %}
-            60*24*7 AS interval_int
-            SELECT
-              toStartOfInterval(request_timestamp, INTERVAL 1 DAY) AS timeseries,
+            60*24*7
           {% elif interval=='thirtydays' %}
-            60*24*30 AS interval_int
-            SELECT
-              toStartOfInterval(request_timestamp, INTERVAL 1 DAY) AS timeseries,
+            60*24*30
           {% elif interval=='nintydays' %}
-            60*24*90 AS interval_int
-            SELECT
-              toStartOfInterval(request_timestamp, INTERVAL 1 DAY) AS timeseries,
+            60*24*90
           {% else %}
-            60*24*365 AS interval_int
-            SELECT
-              toStartOfInterval(request_timestamp, INTERVAL 1 MONTH) AS timeseries,
-          {% endif %}
+            60*24*365
+          {% endif %} AS interval_int
+          SELECT
+          {% if granularity=='minute' %}
+            toStartOfInterval(created_at, INTERVAL 1 MINUTE)
+          {% elif granularity=='hour' %}
+            toStartOfInterval(created_at, INTERVAL 1 HOUR)
+          {% elif granularity=='day'%}
+            toStartOfInterval(created_at, INTERVAL 1 DAY)
+          {% else %}
+            toStartOfInterval(created_at, INTERVAL 1 MONTH)
+          {% endif %} AS timeseries,
             COUNT(*) AS requests,
             SUM(CASE WHEN JSONLength(toString(error))=0 THEN 0 ELSE 1 END) AS errors
         FROM llm_json
         WHERE request_timestamp BETWEEN timestamp_sub(minute, interval_int, curr_time) AND curr_time
         GROUP BY timeseries
+        ORDER BY timeseries ASC
 publish: requests_timeline
 params:
   - name: interval
     type: string
     default: fiveminute
+  - name: granularity
+    type: string
+    default: hour

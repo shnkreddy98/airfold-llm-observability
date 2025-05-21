@@ -1,6 +1,6 @@
-name: user_count
+name: latency_timeline
 nodes:
-  - calc_cost_over_time:
+  - get_latency:
       sql: |
         WITH
           now() AS curr_time,
@@ -35,17 +35,17 @@ nodes:
           {% else %}
             toStartOfInterval(created_at, INTERVAL 1 MONTH)
           {% endif %} AS timeseries,
-          COUNT(DISTINCT user) AS users
+          AVG(created_at - request_timestamp) AS latency
         FROM llm_json
-        WHERE created_at BETWEEN timestamp_sub(minute, interval_int, curr_time)
+        WHERE request_timestamp BETWEEN timestamp_sub(minute, interval_int, curr_time)
         AND curr_time
         GROUP BY timeseries
         ORDER BY timeseries ASC
-publish: user_count
+publish: latency_timeline
 params:
   - name: interval
     type: string
     default: fiveminutes
   - name: granularity
     type: string
-    default: minute
+    default: hour

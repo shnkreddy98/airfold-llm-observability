@@ -1,0 +1,74 @@
+name: quantiles
+nodes:
+  - get_quantiles:
+      sql: |
+        WITH
+          now() AS curr_time,
+          {% if interval=='fiveminutes' %}
+            5
+          {% elif interval=='thirtyminutes' %}
+            30
+          {% elif interval=='onehour' %}
+            60*1
+          {% elif interval=='threehours' %}
+            60*3
+          {% elif interval=='twelvehours' %}
+            60*12
+          {% elif interval=='oneday' %}
+            60*24
+          {% elif interval=='sevendays' %}
+            60*24*7
+          {% elif interval=='thirtydays' %}
+            60*24*30
+          {% elif interval=='nintydays' %}
+            60*24*90
+          {% else %}
+            60*24*365
+          {% endif %} AS interval_int
+          SELECT
+          {% if granularity=='minute' %}
+            toStartOfInterval(created_at, INTERVAL 1 MINUTE)
+          {% elif granularity=='hour' %}
+            toStartOfInterval(created_at, INTERVAL 1 HOUR)
+          {% elif granularity=='day'%}
+            toStartOfInterval(created_at, INTERVAL 1 DAY)
+          {% else %}
+            toStartOfInterval(created_at, INTERVAL 1 MONTH)
+          {% endif %} AS timeseries,
+            {% if col_val=='latency' %}
+              quantileExact(0.75)(created_at-request_timestamp) AS p75latency,
+              quantileExact(0.90)(created_at-request_timestamp) AS p90latency,
+              quantileExact(0.95)(created_at-request_timestamp) AS p95latency,
+              quantileExact(0.99)(created_at-request_timestamp) AS p99latency
+            {% elif col_val=='prompt' %}
+              quantileExact(0.75)(usage_input_tokens) AS p75prompt,
+              quantileExact(0.90)(usage_input_tokens) AS p90prompt,
+              quantileExact(0.95)(usage_input_tokens) AS p95prompt,
+              quantileExact(0.99)(usage_input_tokens) AS p99prompt
+            {% elif col_val=='completion' %}
+              quantileExact(0.75)(usage_output_tokens) AS p75completion,
+              quantileExact(0.90)(usage_output_tokens) AS p90completion,
+              quantileExact(0.95)(usage_output_tokens) AS p95completion,
+              quantileExact(0.99)(usage_output_tokens) AS p99completion
+            {% else %}
+              quantileExact(0.75)(usage_total_tokens) AS p75total,
+              quantileExact(0.90)(usage_total_tokens) AS p90total,
+              quantileExact(0.95)(usage_total_tokens) AS p95total,
+              quantileExact(0.99)(usage_total_tokens) AS p99total
+            {% endif %}
+        FROM llm_json
+        WHERE request_timestamp BETWEEN timestamp_sub(minute, interval_int, curr_time)
+        AND curr_time
+        GROUP BY timeseries
+        ORDER BY timeseries ASC
+publish: quantiles
+params:
+  - name: interval
+    type: string
+    default: fiveminute
+  - name: col_val
+    type: string
+    default: prompt
+  - name: granularity
+    type: string
+    default: hour

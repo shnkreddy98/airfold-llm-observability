@@ -1,6 +1,6 @@
-name: user_count
+name: tokens_pm
 nodes:
-  - calc_cost_over_time:
+  - calc_tokens_per_minute:
       sql: |
         WITH
           now() AS curr_time,
@@ -35,17 +35,17 @@ nodes:
           {% else %}
             toStartOfInterval(created_at, INTERVAL 1 MONTH)
           {% endif %} AS timeseries,
-          COUNT(DISTINCT user) AS users
+          AVG(usage_output_tokens/((created_at-request_timestamp)*60)) AS tokens_per_minute
         FROM llm_json
-        WHERE created_at BETWEEN timestamp_sub(minute, interval_int, curr_time)
+        WHERE request_timestamp BETWEEN timestamp_sub(minute, interval_int, curr_time)
         AND curr_time
         GROUP BY timeseries
         ORDER BY timeseries ASC
-publish: user_count
+publish: tokens_pm
 params:
   - name: interval
     type: string
-    default: fiveminutes
+    default: fiveminute
   - name: granularity
     type: string
-    default: minute
+    default: hour

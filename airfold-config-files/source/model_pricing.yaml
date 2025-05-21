@@ -1,0 +1,8 @@
+name: model_pricing
+cols:
+  model: String
+  input_cost_per_token: Decimal(8,7)
+  output_cost_per_token: Decimal(8,7)
+settings:
+  engine: ReplacingMergeTree()
+  order_by: "`model`"

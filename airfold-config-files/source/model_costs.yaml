@@ -1,0 +1,9 @@
+name: model_costs
+cols:
+  created_at: Datetime
+  input_cost: Decimal(8,7)
+  output_cost: Decimal(8,7)
+  total_cost: Decimal(9,7)
+settings:
+  engine: MergeTree()
+  order_by: "`created_at`"

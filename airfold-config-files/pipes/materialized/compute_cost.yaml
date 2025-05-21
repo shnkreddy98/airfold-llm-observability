@@ -1,0 +1,13 @@
+name: compute_cost
+nodes:
+  - calc_costs_per_response:
+      sql: |
+        SELECT
+          llm_json.created_at,
+          usage_input_tokens*input_cost_per_token AS input_cost,
+          usage_output_tokens*output_cost_per_token AS output_cost,
+          (usage_input_tokens*input_cost_per_token)+(usage_output_tokens*output_cost_per_token) AS total_cost
+        FROM llm_json
+        LEFT JOIN model_pricing
+        ON llm_json.model=model_pricing.model
+to: model_costs

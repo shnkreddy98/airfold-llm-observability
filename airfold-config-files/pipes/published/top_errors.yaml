@@ -1,4 +1,4 @@
-name: errors
+name: top_errors
 nodes:
   - declare_variables:
       sql: |
@@ -25,15 +25,18 @@ nodes:
           {% else %}
             60*24*365
           {% endif %} AS interval_int
-  - agg_node:
+  - get_error_codes:
       sql: |
         SELECT
-          SUM(CASE WHEN JSONLength(toString(error))=0 THEN 0 ELSE 1 END) AS total_errors
+          error.code::String AS error_type,
+          COUNT(*) AS error_instances
         FROM llm_json, declare_variables
-        WHERE request_timestamp BETWEEN timestamp_sub(minute, declare_variables.interval_int, declare_variables.curr_time)
-          AND declare_variables.curr_time
-publish: errors
+        WHERE error.code IS NOT NULL
+        AND request_timestamp BETWEEN timestamp_sub(minute, declare_variables.interval_int, declare_variables.curr_time)
+        AND declare_variables.curr_time
+        GROUP BY error_type
+publish: top_errors
 params:
   - name: interval
     type: string
-    default: fiveminutes
+    default: fiveminute

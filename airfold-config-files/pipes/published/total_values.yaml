@@ -1,4 +1,4 @@
-name: avg_tokens
+name: total_values
 nodes:
   - declare_variables:
       sql: |
@@ -25,30 +25,30 @@ nodes:
           {% else %}
             60*24*365
           {% endif %} AS interval_int
-  - agg_tokens:
+  - agg_cols:
       sql: |
-        {% if token_type=='prompt' %}
+        {% if col_type=='prompt' %}
         SELECT
           AVG(usage_input_tokens) AS avg_prompt_tokens
-        FROM llm_json, declare_variables
-        WHERE request_timestamp BETWEEN timestamp_sub(minute, declare_variables.interval_int, declare_variables.curr_time)
-                                  AND declare_variables.curr_time
-        {% elif token_type=='completion' %}
+        {% elif col_type=='completion' %}
         SELECT
           AVG(usage_output_tokens) AS avg_completion_tokens
-        FROM llm_json, declare_variables
-        WHERE request_timestamp BETWEEN timestamp_sub(minute, declare_variables.interval_int, declare_variables.curr_time)
-                                  AND declare_variables.curr_time
-        {% else %}
+        {% elif col_type=='total' %}
         SELECT
           AVG(usage_total_tokens) AS avg_total_tokens
+        {% elif col_type=='error' %}
+        SELECT
+          SUM(CASE WHEN JSONLength(toString(error))=0 THEN 0 ELSE 1 END) AS total_errors
+        {% else %}
+        SELECT
+          COUNT(*)
+        {% endif %}
         FROM llm_json, declare_variables
         WHERE request_timestamp BETWEEN timestamp_sub(minute, declare_variables.interval_int, declare_variables.curr_time)
-                                  AND declare_variables.curr_time
-        {% endif %}
-publish: avg_tokens
+        AND declare_variables.curr_time
+publish: total_values
 params:
-  - name: token_type
+  - name: col_type
     type: string
     default: prompt
   - name: interval
