@@ -5,28 +5,13 @@ from logging_utils import setup_logging
 
 import logging
 import sys
+import time
 
 datafile = 'responses.json'
 statesave = 'part.txt'
 logfile = 'ingest_llm_{}.log'
 
-if __name__ == "__main__":
-    setup_logging(logfile)
-    initialize(datafile, statesave)
-
-    if len(sys.argv)<2:
-        print("run with --stream or --old \neg. `python3 src/main.py --stream`")
-        exit()
-        
-    if sys.argv[1]=='--stream':
-        stream=True
-    else:
-        stream=False
-
-    ingested = 0
-    batch = 1000
-    no_of_rows = 100_000
-
+def main(ingested, batch, no_of_rows, stream):
     already_ingested = read_file(statesave)
 
     rem_rows = no_of_rows - already_ingested
@@ -43,6 +28,7 @@ if __name__ == "__main__":
             logging.info(f'Generated {already_ingested+(part*batch)+1} rows')
             write_file(datafile, json_data)
             res = ingest('llm_json', datafile)
+            time.sleep(0.5)
             if res:
                 ingested += batch
                 logging.info(f'Ingested {already_ingested+(part*batch)+1} rows')
@@ -53,6 +39,25 @@ if __name__ == "__main__":
         except Exception as e:
             write_file(statesave, ingested)
             logging.error(f'Exited with error {e}')
-            exit()
+            main(ingested, batch, no_of_rows, stream)
     
     write_file(statesave, 0)
+
+if __name__ == "__main__":
+    setup_logging(logfile)
+    initialize(datafile, statesave)
+
+    if len(sys.argv)<2:
+        print("run with --stream or --old \neg. `python3 src/main.py --stream`")
+        exit()
+        
+    if sys.argv[1]=='--stream':
+        stream=True
+    else:
+        stream=False
+
+    ingested = 0
+    batch = 10000
+    no_of_rows = 10_000_000
+
+    main(ingested, batch, no_of_rows, stream)
