@@ -1,0 +1,41 @@
+name: total_values_mv
+nodes:
+  - agg_cols:
+      sql: |
+        {% if col_type=='prompt' %}
+        SELECT
+          avgMerge(avg_prompt_tokens) AS mv_avg_prompt_tokens
+        {% elif col_type=='completion' %}
+        SELECT
+          avgMerge(usage_output_tokens) AS avg_completion_tokens
+        {% elif col_type=='total' %}
+        SELECT
+          avgMerge(usage_total_tokens) AS avg_total_tokens
+        {% else %}
+        SELECT
+          sumMergeIf(1, JSONLength(toString(error))!=0) AS total_errors
+        {% endif %}
+        {% if granularity=='month' %}
+          FROM granularity_month_mv
+        {% elif granularity=='day' %}
+          FROM granularity_day_mv
+        {% elif granularity=='hour' %}
+          FROM granularity_hour_mv
+        {% else %}
+          FROM granularity_minute_mv
+        {% endif %}
+        WHERE timeseries BETWEEN {{ start_date }} AND {{ end_date }}
+publish: total_values_mv
+params:
+  - name: col_type
+    type: string
+    default: prompt
+  - name: granularity
+    type: string
+    default: hour
+  - name: start_date
+    type: string
+    default: "2024-01-01 00:00:00"
+  - name: end_date
+    type: string
+    default: "2070-31-12 23:59:59"

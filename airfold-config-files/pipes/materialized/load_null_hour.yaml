@@ -1,0 +1,33 @@
+name: load_null_hour
+nodes:
+  - load_min:
+      sql: |
+        SELECT
+          toStartOfInterval(request_timestamp, INTERVAL 1 HOUR) AS timeseries,
+          avgState(usage_input_tokens) AS avg_prompt_tokens,
+          avgState(usage_output_tokens) AS avg_completion_tokens,
+          avgState(usage_total_tokens) AS avg_total_tokens,
+          sumIfState(1, JSONLength(toString(error))!=0) AS total_errors,
+          uniqState(user) AS user_count_col,
+          avgState(created_at - request_timestamp) AS avg_latency,
+          quantileExactState(0.75)(created_at-request_timestamp) AS p75latency,
+          quantileExactState(0.90)(created_at-request_timestamp) AS p90latency,
+          quantileExactState(0.95)(created_at-request_timestamp) AS p95latency,
+          quantileExactState(0.99)(created_at-request_timestamp) AS p99latency,
+          quantileExactState(0.75)(usage_input_tokens) AS p75prompt,
+          quantileExactState(0.90)(usage_input_tokens) AS p90prompt,
+          quantileExactState(0.95)(usage_input_tokens) AS p95prompt,
+          quantileExactState(0.99)(usage_input_tokens) AS p99prompt,
+          quantileExactState(0.75)(usage_output_tokens) AS p75completion,
+          quantileExactState(0.90)(usage_output_tokens) AS p90completion,
+          quantileExactState(0.95)(usage_output_tokens) AS p95completion,
+          quantileExactState(0.99)(usage_output_tokens) AS p99completion,
+          quantileExactState(0.75)(usage_total_tokens) AS p75total,
+          quantileExactState(0.90)(usage_total_tokens) AS p90total,
+          quantileExactState(0.95)(usage_total_tokens) AS p95total,
+          quantileExactState(0.99)(usage_total_tokens) AS p99total,
+          countState(id) AS requests_count,
+          avgState(usage_output_tokens/((created_at-request_timestamp)*60)) AS avg_tokens_per_minute
+        FROM null_llm_json
+        GROUP BY timeseries
+to: granularity_hour_mv

@@ -1,0 +1,12 @@
+name: load_null
+nodes:
+  - load_min:
+      sql: |
+        SELECT * FROM llm_json
+        WHERE request_timestamp BETWEEN '2025-04-01' AND '2025-06-31'
+
+# to: null_llm_json
+# refresh:
+#   strategy: append
+#   interval: EVERY 1 MONTH
+#   refresh_on_create: true

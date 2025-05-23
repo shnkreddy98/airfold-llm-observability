@@ -1,0 +1,29 @@
+name: tokens_pm_mv
+nodes:
+  - calc_tokens_per_minute:
+      sql: |
+        SELECT
+          avgMerge(avg_tokens_per_minute) AS mv_avg_tokens_per_minute
+        {% if granularity=='month' %}
+          FROM granularity_month_mv
+        {% elif granularity=='day' %}
+          FROM granularity_day_mv
+        {% elif granularity=='hour'%}
+          FROM granularity_hour_mv
+        {% else %}
+          FROM granularity_minute_mv
+        {% endif %}
+        WHERE timeseries BETWEEN {{ start_date }} AND {{ end_date }}
+        GROUP BY timeseries
+        ORDER BY timeseries ASC
+publish: tokens_pm_mv
+params:
+  - name: start_date
+    type: string
+    default: "2024-01-01 00:00:00"
+  - name: end_date
+    type: string
+    default: "2025-12-31 23:59:59"
+  - name: granularity
+    type: string
+    default: hour

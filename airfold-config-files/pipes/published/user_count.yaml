@@ -23,7 +23,7 @@ nodes:
           {% elif interval=='nintydays' %}
             60*24*90
           {% else %}
-            60*24*365
+            60*24*365*2
           {% endif %} AS interval_int
           SELECT
           {% if granularity=='minute' %}

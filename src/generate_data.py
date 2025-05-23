@@ -328,12 +328,12 @@ def generate_batch_responses(count: int, stream: bool = False):
     response_ids = []
     
     for i in range(count):
-        now = round(datetime.now().timestamp())
+        now = int(datetime.now().timestamp())
 
         if stream:
             request_timestamp = now
         else:
-            start_ts = datetime(2024, 1, 1, 0, 0).timestamp()
+            start_ts = int(datetime(2024, 1, 1, 0, 0).timestamp())
             end_ts = now
             request_timestamp = random.randint(start_ts, end_ts)
 

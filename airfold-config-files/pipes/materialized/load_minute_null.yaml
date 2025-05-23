@@ -1,0 +1,17 @@
+name: load_minute_null
+nodes:
+  - load_min:
+      sql: |
+        SELECT
+          toStartOfInterval(request_timestamp, INTERVAL 1 MINUTE) AS timeseries,
+          avgState(usage_input_tokens) AS avg_prompt_tokens,
+          avgState(usage_output_tokens) AS avg_completion_tokens,
+          avgState(usage_total_tokens) AS avg_total_tokens,
+          sumIfState(1, JSONLength(toString(error))!=0) AS total_errors,
+          uniqState(user) AS user_count_col,
+          avgState(created_at - request_timestamp) AS avg_latency,
+          countState(*) AS requests_count,
+          avgState(usage_output_tokens/((created_at-request_timestamp)*60)) AS avg_tokens_per_minute
+        FROM null_llm_json
+        GROUP BY timeseries
+to: granularity_minute_mv

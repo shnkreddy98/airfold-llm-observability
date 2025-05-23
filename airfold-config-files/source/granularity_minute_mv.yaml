@@ -1,0 +1,30 @@
+name: granularity_minute_mv
+cols:
+  timeseries: DateTime
+  avg_prompt_tokens: AggregateFunction(avg, Int32)
+  avg_completion_tokens: AggregateFunction(avg, Int32)
+  avg_total_tokens: AggregateFunction(avg, Int32)
+  total_errors: AggregateFunction(sumIf, UInt8, UInt8)
+  user_count_col: AggregateFunction(uniq, Nullable(String))
+  avg_latency: AggregateFunction(avg, Int32)
+  p75latency: AggregateFunction(quantileExact(0.75), Int32)
+  p90latency: AggregateFunction(quantileExact(0.9), Int32)
+  p95latency: AggregateFunction(quantileExact(0.95), Int32)
+  p99latency: AggregateFunction(quantileExact(0.99), Int32)
+  p75prompt: AggregateFunction(quantileExact(0.75), Int32)
+  p90prompt: AggregateFunction(quantileExact(0.9), Int32)
+  p95prompt: AggregateFunction(quantileExact(0.95), Int32)
+  p99prompt: AggregateFunction(quantileExact(0.99), Int32)
+  p75completion: AggregateFunction(quantileExact(0.75), Int32)
+  p90completion: AggregateFunction(quantileExact(0.9), Int32)
+  p95completion: AggregateFunction(quantileExact(0.95), Int32)
+  p99completion: AggregateFunction(quantileExact(0.99), Int32)
+  p75total: AggregateFunction(quantileExact(0.75), Int32)
+  p90total: AggregateFunction(quantileExact(0.9), Int32)
+  p95total: AggregateFunction(quantileExact(0.95), Int32)
+  p99total: AggregateFunction(quantileExact(0.99), Int32)
+  requests_count: AggregateFunction(count, String)
+  avg_tokens_per_minute: AggregateFunction(avg, Float64)
+settings:
+  engine: AggregatingMergeTree()
+  order_by: "`timeseries`"

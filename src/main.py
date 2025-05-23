@@ -28,14 +28,13 @@ def main(ingested, batch, no_of_rows, stream):
             logging.info(f'Generated {already_ingested+(part*batch)+1} rows')
             write_file(datafile, json_data)
             res = ingest('llm_json', datafile)
-            time.sleep(0.5)
             if res:
                 ingested += batch
                 logging.info(f'Ingested {already_ingested+(part*batch)+1} rows')
                 write_file(statesave, ingested)
             else:
                 logging.error(f'Exited with {res.status_code}')
-                exit()
+                main(ingested, batch, no_of_rows, stream)
         except Exception as e:
             write_file(statesave, ingested)
             logging.error(f'Exited with error {e}')
@@ -57,7 +56,7 @@ if __name__ == "__main__":
         stream=False
 
     ingested = 0
-    batch = 10000
-    no_of_rows = 10_000_000
+    batch = 2500
+    no_of_rows = 5_000_000
 
     main(ingested, batch, no_of_rows, stream)
