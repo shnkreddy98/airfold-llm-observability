@@ -1,0 +1,19 @@
+version: clickhouse.airfold.co/v1
+type: S3Table
+cols:
+  id: Int64
+  updated: DATE
+  confirmed: Int64
+  confirmed_change: Nullable(Int64)
+  deaths: Int64
+  deaths_change: Nullable(Int64)
+  country_region: String
+  load_time: DateTime64(3)
+s3:
+  bucket: af-assume-test-dev
+  path: test/*
+  cron: 0 0 1 1 *
+  timezone: Etc/GMT-7
+  secret: secret_af-assume-test-dev_g9wm9mi4lx
+  strategy: replace
+settings: MergeTree() PARTITION BY toYYYYMM(load_time) ORDER BY `id`

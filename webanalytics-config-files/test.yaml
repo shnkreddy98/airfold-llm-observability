@@ -1,0 +1,6 @@
+version: clickhouse.airfold.co/v1
+type: Pipe
+description: ''
+nodes:
+  - node1:
+      sql: select 1

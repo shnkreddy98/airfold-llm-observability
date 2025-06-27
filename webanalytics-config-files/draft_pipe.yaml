@@ -1,0 +1,13 @@
+name: draft_top_referrers_pipe
+description: 'Loads top referrers'
+nodes:
+    - top_referrers:
+        description: 'Gets the top referrers'
+        sql: |
+            SELECT
+              referrer,
+              COUNT() AS num_referrers
+            FROM webevents_data
+            GROUP BY referrer
+            ORDER BY num_referrers DESC
+            LIMIT 3

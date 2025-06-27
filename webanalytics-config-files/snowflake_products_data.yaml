@@ -1,0 +1,15 @@
+version: clickhouse.airfold.co/v1
+type: S3Table
+cols:
+  ID: Int64
+  NAME: String
+  PRICE: Float64
+  DESCRIPTION: String
+s3:
+  bucket: shashanks-test-bucket
+  path: snowflake_stage/*
+  cron: 0 0 1 1 *
+  timezone: Etc/GMT
+  secret: secret_shashanks-test-bucket_64jut1lxv8
+  strategy: replace
+settings: MergeTree() PARTITION BY tuple() ORDER BY `ID`

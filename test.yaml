@@ -1,0 +1,6 @@
+name: test_node
+nodes:
+  - load:
+      sql: |
+        SELECT COUNT(*) FROM llm_json
+
